@@ -12,8 +12,7 @@ if [ ! -f "$SF_BIN" ]; then
   SF_URL="https://github.com/official-stockfish/Stockfish/releases/download/sf_18/stockfish-ubuntu-x86-64.tar"
   curl -L "$SF_URL" -o /tmp/sf.tar
   tar -xf /tmp/sf.tar -C /tmp
-  # The tar contains stockfish-ubuntu-x86-64 binary
-  find /tmp -name "stockfish*" -type f -exec cp {} "$SF_BIN" \;
+  find /tmp -name "stockfish*" -type f | head -1 | xargs -I{} cp {} "$SF_BIN"
   chmod +x "$SF_BIN"
   rm -f /tmp/sf.tar
   echo "[start] Stockfish downloaded: $SF_BIN"
@@ -111,26 +110,15 @@ YAML
 
 echo "[start] config.yml written."
 
-# ── 3. Start a tiny health HTTP server in the background ────────────────────
-# Render's free Web Service requires the process to bind to PORT.
-PORT="${PORT:-10000}"
-python3 -c "
-import http.server, os, threading
-class H(http.server.BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b'ok')
-    def log_message(self, *a): pass
-port = int(os.environ.get('PORT', 10000))
-srv = http.server.HTTPServer(('0.0.0.0', port), H)
-t = threading.Thread(target=srv.serve_forever, daemon=True)
-t.start()
-print(f'[health] listening on port {port}')
-import time
-while True: time.sleep(3600)
-" &
+# ── 3. Start health server as a separate background process ─────────────────
+# Run health.py in the background. It stays alive independently of lichess-bot.
+python3 health.py &
+HEALTH_PID=$!
+echo "[start] Health server PID: $HEALTH_PID"
 
-# ── 4. Start lichess-bot ─────────────────────────────────────────────────────
+# ── 4. Start lichess-bot in the foreground ───────────────────────────────────
 echo "[start] Starting lichess-bot..."
-exec python3 lichess-bot.py
+python3 lichess-bot.py
+
+# If lichess-bot exits, kill the health server too so Render restarts everything.
+kill $HEALTH_PID 2>/dev/null || true
