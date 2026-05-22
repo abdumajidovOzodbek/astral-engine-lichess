@@ -97,7 +97,7 @@ greeting:
 matchmaking:
   allow_matchmaking: true
   challenge_variant: "standard"
-  challenge_timeout: 5
+  challenge_timeout: 1
   challenge_initial_time:
     - 60
     - 180
