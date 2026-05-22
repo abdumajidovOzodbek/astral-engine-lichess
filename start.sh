@@ -97,7 +97,7 @@ greeting:
 matchmaking:
   allow_matchmaking: true
   challenge_variant: "standard"
-  challenge_timeout: 1
+  challenge_timeout: 5
   challenge_initial_time:
     - 60
     - 180
@@ -106,10 +106,10 @@ matchmaking:
     - 1
     - 2
     - 3
-  opponent_rating_difference: 500
+  opponent_rating_difference: 1000
   rating_preference: "none"
   challenge_mode: "rated"
-  challenge_filter: "coarse"
+  challenge_filter: "none"
   include_challenge_block_list: false
 YAML
 
