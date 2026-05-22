@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# Force UTF-8 everywhere — prevents UnicodeDecodeError from Stockfish's banner
+export PYTHONIOENCODING=utf-8
+export PYTHONUTF8=1
+export PYTHONUNBUFFERED=1
+
 # ── 1. Download Stockfish for Linux if not already present ──────────────────
 SF_DIR="./engines"
 SF_BIN="$SF_DIR/stockfish"
@@ -31,7 +36,7 @@ engine:
   name: "stockfish"
   protocol: "uci"
   ponder: true
-  silence_stderr: false
+  silence_stderr: true
 
   draw_or_resign:
     resign_enabled: false
@@ -111,14 +116,25 @@ YAML
 echo "[start] config.yml written."
 
 # ── 3. Start health server as a separate background process ─────────────────
-# Run health.py in the background. It stays alive independently of lichess-bot.
 python3 health.py &
 HEALTH_PID=$!
 echo "[start] Health server PID: $HEALTH_PID"
 
-# ── 4. Start lichess-bot in the foreground ───────────────────────────────────
+# ── 4. Self-ping loop — keeps Render awake without UptimeRobot ──────────────
+# Pings our own health endpoint every 4 minutes so Render never idles out.
+(
+  sleep 30  # wait for health server to be ready
+  while true; do
+    curl -sf "http://localhost:${PORT:-10000}/" > /dev/null 2>&1 || true
+    sleep 240
+  done
+) &
+PING_PID=$!
+echo "[start] Self-ping loop PID: $PING_PID"
+
+# ── 5. Start lichess-bot in the foreground ───────────────────────────────────
 echo "[start] Starting lichess-bot..."
 python3 lichess-bot.py
 
-# If lichess-bot exits, kill the health server too so Render restarts everything.
-kill $HEALTH_PID 2>/dev/null || true
+# If lichess-bot exits, kill background processes so Render restarts cleanly.
+kill $HEALTH_PID $PING_PID 2>/dev/null || true
