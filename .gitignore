@@ -1,0 +1,7 @@
+config.yml
+engines/
+__pycache__/
+*.pyc
+*.log
+.env
+lichess_bot_auto_logs/

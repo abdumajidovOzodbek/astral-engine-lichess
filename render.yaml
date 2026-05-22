@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: astral-engine-lichess
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: bash start.sh
+    healthCheckPath: /
+    envVars:
+      - key: LICHESS_TOKEN
+        sync: false
+      - key: PYTHONUNBUFFERED
+        value: "1"
